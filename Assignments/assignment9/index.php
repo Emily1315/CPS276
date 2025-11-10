@@ -5,7 +5,7 @@ require_once "classes/Validation.php";
 require_once "classes/StickyForm.php";
 
 $stickyForm = new StickyForm();
-$pdo = new PdoMethods();   // ✅ matches your class name exactly
+$pdo = new PdoMethods();
 
 // Define form configuration
 $formConfig = [
@@ -45,7 +45,7 @@ $formConfig = [
       "id" => "password",
       "name" => "password",
       "label" => "Password",
-      "type" => "text",
+      "type" => "password",   // better UX
       "regex" => "password",
       "required" => true,
       "value" => "",
@@ -55,7 +55,7 @@ $formConfig = [
       "id" => "confirmPassword",
       "name" => "confirmPassword",
       "label" => "Confirm Password",
-      "type" => "text",
+      "type" => "password",   // better UX
       "required" => true,
       "value" => "",
       "error" => ""
@@ -80,8 +80,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $bindings = [[":email", $_POST["email"], "str"]];
     $records = $pdo->selectBinded($sql, $bindings);
 
-    if ($records && count($records) > 0) {
+    if (is_array($records) && count($records) > 0) {
       $formConfig["fields"]["email"]["error"] = "Email already exists";
+      $formConfig["masterStatus"]["error"] = true;
+    } elseif ($records === false) {
+      $formConfig["fields"]["email"]["error"] = "Database error during email check";
       $formConfig["masterStatus"]["error"] = true;
     }
   }
@@ -98,11 +101,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     ];
     $pdo->otherBinded($sql, $bindings);
 
-    // Clear form values after success
+    // Clear form values after success (guard added)
     foreach ($formConfig["fields"] as $key => $field) {
-      $formConfig["fields"][$key]["value"] = "";
-      $formConfig["fields"][$key]["error"] = "";
+      if (is_array($field)) {
+        $formConfig["fields"][$key]["value"] = "";
+        $formConfig["fields"][$key]["error"] = "";
+      }
     }
+    $formConfig["masterStatus"]["error"] = false; // reset master status too
   }
 }
 ?>
@@ -136,15 +142,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $sql = "SELECT firstName, lastName, email FROM users";
     $records = $pdo->selectNotBinded($sql);
 
-    if ($records && count($records) > 0) {
+    if (is_array($records) && count($records) > 0) {
       echo "<table border='1'>";
       echo "<tr><th>First Name</th><th>Last Name</th><th>Email</th></tr>";
       foreach ($records as $row) {
         echo "<tr><td>{$row['firstName']}</td><td>{$row['lastName']}</td><td>{$row['email']}</td></tr>";
       }
       echo "</table>";
-    } else {
+    } elseif (is_array($records)) {
       echo "<p>No users registered yet.</p>";
+    } else {
+      echo "<p>Database query failed.</p>";
     }
   ?>
 </body>
