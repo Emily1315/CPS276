@@ -1,0 +1,22 @@
+<?php
+// Include the PdoMethods class from the sibling classes folder
+require_once __DIR__ . '/../classes/PdoMethods.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete'])) {
+    $pdo = new PdoMethods();
+
+    // Loop through selected IDs and delete each admin
+    foreach ($_POST['delete'] as $id) {
+        $sql = "DELETE FROM admins WHERE id = :id";
+        $bindings = [
+            [":id", $id, "int"]
+        ];
+        $pdo->otherBinded($sql, $bindings);
+    }
+
+    // Message to show in the view
+    $message = "Admin(s) deleted";
+
+    // Load the view again with $message
+    require __DIR__ . '/../views/deleteAdminsTable.php';
+}
